@@ -117,11 +117,10 @@
                     <exclude name="META-INF/**" />
                   </fileset>
                 </move>
-                <!-- Copy javax/servlet/jsp/resources/ into javax/servlet/resources/ to satisfy XML validation rules.
-                     Leave the original location alone to satisfy JSP implementation requirements. -->
-                <copy todir="${project.build.outputDirectory}/javax/servlet/resources/">
+                <!-- Move javax/servlet/jsp/resources/ into javax/servlet/resources/ to satisfy XML validation rules. -->
+                <move todir="${project.build.outputDirectory}/javax/servlet/resources/">
                   <fileset dir="${project.build.outputDirectory}/javax/servlet/jsp/resources/" />
-                </copy>
+                </move>
               </target>
             </configuration>
           </execution>
