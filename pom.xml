@@ -1,22 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>org.eclipse.jetty.toolchain</groupId>
-    <artifactId>jetty-toolchain</artifactId>
-    <version>1.7</version>
+    <groupId>org.eclipse.jetty</groupId>
+    <artifactId>jetty-parent</artifactId>
+    <version>31</version>
   </parent>
 
-  <modelVersion>4.0.0</modelVersion>
   <!-- Maven artifact name is 'jetty-servlet-api' and not
   'jetty-javax-servlet-api' for backwards compatibility reasons. -->
   <artifactId>jetty-servlet-api</artifactId>
   <version>4.0.7-SNAPSHOT</version>
-  <name>Jetty :: Servlet API and Schemas for JPMS and OSGi</name>
   <packaging>jar</packaging>
+  <name>Jetty :: Servlet API and Schemas for JPMS and OSGi</name>
+
+  <scm>
+    <connection>scm:git:https://github.com/jetty/jetty-servlet-api.git</connection>
+    <developerConnection>scm:git:git@github.com:jetty/jetty-servlet-api.git</developerConnection>
+    <tag>HEAD</tag>
+    <url>https://github.com/jetty/jetty-servlet-api</url>
+  </scm>
 
   <properties>
-    <maven.version>3.0</maven.version>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <deps.sources.directory>${project.build.directory}/sources/</deps.sources.directory>
+    <jdk.version.minimum>11</jdk.version.minimum>
   </properties>
 
   <dependencies>
@@ -35,56 +42,46 @@
 
   <build>
     <plugins>
-      <!-- Unpack source dependencies in the target/sources/ directory -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <version>3.6.1</version>
-        <executions>
-          <execution>
-            <id>unpack-source</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>unpack-dependencies</goal>
-            </goals>
-            <configuration>
-              <classifier>sources</classifier>
-              <failOnMissingClassifierArtifact>false</failOnMissingClassifierArtifact>
-              <outputDirectory>${deps.sources.directory}</outputDirectory>
-              <excludes>
-                META-INF/**,
-                pom.xml,
-                about.html
-              </excludes>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
 
-      <!-- Add the target/sources/ directory as a source directory -->
+      <!-- Generate the correct OSGi manifest -->
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>build-helper-maven-plugin</artifactId>
-        <version>3.4.0</version>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-bundle-plugin</artifactId>
+        <version>5.1.9</version>
+        <extensions>true</extensions>
+        <configuration>
+          <instructions>
+            <Bundle-SymbolicName>org.eclipse.jetty.servlet-api</Bundle-SymbolicName>
+            <Bundle-Name>Eclipse Jetty Servlet API and Schemas for JPMS and OSGi</Bundle-Name>
+            <Bundle-Description>Combined servlet api and schemas for use in JPMS and OSGi environments</Bundle-Description>
+            <Bundle-RequiredExecutionEnvironment>JavaSE-11</Bundle-RequiredExecutionEnvironment>
+            <Bundle-Vendor>Eclipse</Bundle-Vendor>
+            <Bundle-DocURL>https://eclipse.org/jetty</Bundle-DocURL>
+            <_nouses>true</_nouses>
+            <Export-Package>javax.servlet;uses:="javax.servlet.annotation,javax.servlet.descriptor";version="4.0.0",
+              javax.servlet.resources;version="4.0.0",
+              javax.servlet.jsp.resources;version="4.0.0",
+              javax.servlet.annotation;uses:="javax.servlet";version="4.0.0",
+              javax.servlet.http;uses:="javax.servlet";version="4.0.0",
+              javax.servlet.descriptor;version="4.0.0"</Export-Package>
+            <Import-Package>java.io,
+              java.lang,
+              java.lang.annotation,
+              java.lang.invoke,
+              java.lang.reflect,
+              java.net,
+              java.security,
+              java.text,
+              java.util,
+              java.util.function</Import-Package>
+          </instructions>
+        </configuration>
         <executions>
           <execution>
-            <id>set-osgi-version</id>
-            <phase>validate</phase>
+            <id>bundle-manifest</id>
             <goals>
-              <goal>parse-version</goal>
+              <goal>manifest</goal>
             </goals>
-          </execution>
-          <execution>
-            <id>add-source</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>add-source</goal>
-            </goals>
-            <configuration>
-              <sources>
-                <source>${deps.sources.directory}</source>
-              </sources>
-            </configuration>
           </execution>
         </executions>
       </plugin>
@@ -96,10 +93,10 @@
         <executions>
           <execution>
             <id>copy-servlet-jsp-resources</id>
-            <phase>process-resources</phase>
             <goals>
               <goal>run</goal>
             </goals>
+            <phase>process-resources</phase>
             <configuration>
               <target>
                 <!-- Move all resources into place first.
@@ -107,15 +104,15 @@
                   -->
                 <move todir="${project.build.outputDirectory}">
                   <fileset dir="${deps.sources.directory}">
-                    <exclude name="javax/**/*.class"/>
-                    <exclude name="javax/**/*.java"/>
+                    <exclude name="javax/**/*.class" />
+                    <exclude name="javax/**/*.java" />
                     <exclude name="META-INF/**" />
                   </fileset>
                 </move>
                 <!-- Copy javax/servlet/jsp/resources/ into javax/servlet/resources/ to satisfy XML validation rules.
                      Leave the original location alone to satisfy JSP implementation requirements. -->
                 <copy todir="${project.build.outputDirectory}/javax/servlet/resources/">
-                  <fileset dir="${project.build.outputDirectory}/javax/servlet/jsp/resources/"/>
+                  <fileset dir="${project.build.outputDirectory}/javax/servlet/jsp/resources/" />
                 </copy>
               </target>
             </configuration>
@@ -123,76 +120,57 @@
         </executions>
       </plugin>
 
-      <!-- Compile all the sources -->
+      <!-- Unpack source dependencies in the target/sources/ directory -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <configuration>
-          <source>11</source>
-          <target>11</target>
-          <release>11</release>
-        </configuration>
-      </plugin>
-
-      <!-- Generate the correct OSGi manifest -->
-      <plugin>
-        <groupId>org.apache.felix</groupId>
-        <artifactId>maven-bundle-plugin</artifactId>
-        <version>5.1.9</version>
-        <extensions>true</extensions>
+        <artifactId>maven-dependency-plugin</artifactId>
         <executions>
           <execution>
-            <id>bundle-manifest</id>
+            <id>unpack-source</id>
             <goals>
-              <goal>manifest</goal>
+              <goal>unpack-dependencies</goal>
+            </goals>
+            <phase>generate-sources</phase>
+            <configuration>
+              <classifier>sources</classifier>
+              <failOnMissingClassifierArtifact>false</failOnMissingClassifierArtifact>
+              <outputDirectory>${deps.sources.directory}</outputDirectory>
+              <excludes>META-INF/**,
+                pom.xml,
+                about.html</excludes>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Create the javadoc jar -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <configuration>
+          <source>8</source>
+          <doclint>none</doclint>
+        </configuration>
+        <executions>
+          <execution>
+            <id>attach-javadocs</id>
+            <goals>
+              <goal>jar</goal>
             </goals>
           </execution>
         </executions>
-        <configuration>
-          <instructions>
-            <Bundle-SymbolicName>org.eclipse.jetty.servlet-api</Bundle-SymbolicName>
-            <Bundle-Name>Eclipse Jetty Servlet API and Schemas for JPMS and OSGi</Bundle-Name>
-            <Bundle-Description>Combined servlet api and schemas for use in JPMS and OSGi environments
-            </Bundle-Description>
-            <Bundle-RequiredExecutionEnvironment>JavaSE-11</Bundle-RequiredExecutionEnvironment>
-            <Bundle-Vendor>Eclipse</Bundle-Vendor>
-            <Bundle-DocURL>https://eclipse.org/jetty</Bundle-DocURL>
-            <_nouses>true</_nouses>
-            <Export-Package>
-              javax.servlet;uses:="javax.servlet.annotation,javax.servlet.descriptor";version="4.0.0",
-              javax.servlet.resources;version="4.0.0",
-              javax.servlet.jsp.resources;version="4.0.0",
-              javax.servlet.annotation;uses:="javax.servlet";version="4.0.0",
-              javax.servlet.http;uses:="javax.servlet";version="4.0.0",
-              javax.servlet.descriptor;version="4.0.0"
-            </Export-Package>
-            <Import-Package>
-              java.io,
-              java.lang,
-              java.lang.annotation,
-              java.lang.invoke,
-              java.lang.reflect,
-              java.net,
-              java.security,
-              java.text,
-              java.util,
-              java.util.function
-            </Import-Package>
-          </instructions>
-        </configuration>
       </plugin>
 
       <!-- Shade in the compiled classes and the resources from jetty-schemas -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
-        <version>3.5.1</version>
         <executions>
           <execution>
-            <phase>package</phase>
             <goals>
               <goal>shade</goal>
             </goals>
+            <phase>package</phase>
             <configuration>
               <createSourcesJar>true</createSourcesJar>
               <shadeSourcesContent>true</shadeSourcesContent>
@@ -232,6 +210,34 @@
         </executions>
       </plugin>
 
+      <!-- Add the target/sources/ directory as a source directory -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>3.4.0</version>
+        <executions>
+          <execution>
+            <id>set-osgi-version</id>
+            <goals>
+              <goal>parse-version</goal>
+            </goals>
+            <phase>validate</phase>
+          </execution>
+          <execution>
+            <id>add-source</id>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <phase>generate-sources</phase>
+            <configuration>
+              <sources>
+                <source>${deps.sources.directory}</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
       <!-- Add module-info.class to the shaded jar -->
       <plugin>
         <groupId>org.moditect</groupId>
@@ -240,15 +246,14 @@
         <executions>
           <execution>
             <id>add-module-info</id>
-            <phase>package</phase>
             <goals>
               <goal>add-module-info</goal>
             </goals>
+            <phase>package</phase>
             <configuration>
               <overwriteExistingFiles>true</overwriteExistingFiles>
               <module>
-                <moduleInfoSource>
-                  module jetty.servlet.api {
+                <moduleInfoSource>module jetty.servlet.api {
                   exports javax.servlet;
                   exports javax.servlet.annotation;
                   exports javax.servlet.descriptor;
@@ -256,73 +261,12 @@
                   exports javax.servlet.resources;
                   //open resources so Class.getResource() can access them
                   opens javax.servlet.resources;
-                  }
-                </moduleInfoSource>
+                  }</moduleInfoSource>
               </module>
             </configuration>
           </execution>
         </executions>
       </plugin>
-
-      <!-- Create the source jar -->
-      <!-- plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-source-plugin</artifactId>
-        <version>3.3.0</version>
-        <executions>
-          <execution>
-            <id>attach-sources</id>
-            <phase>process-classes</phase>
-            <goals>
-              <goal>jar</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin -->
-
-      <!-- Create the javadoc jar -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-javadoc-plugin</artifactId>
-        <version>3.6.0</version>
-        <executions>
-          <execution>
-            <id>attach-javadocs</id>
-            <goals>
-              <goal>jar</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <source>8</source>
-          <doclint>none</doclint>
-        </configuration>
-      </plugin>
-
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-release-plugin</artifactId>
-        <version>3.0.1</version>
-        <dependencies>
-          <dependency>
-            <groupId>org.apache.maven.scm</groupId>
-            <artifactId>maven-scm-api</artifactId>
-            <version>2.0.1</version>
-          </dependency>
-          <dependency>
-            <groupId>org.apache.maven.scm</groupId>
-            <artifactId>maven-scm-provider-gitexe</artifactId>
-            <version>2.0.1</version>
-          </dependency>
-        </dependencies>
-      </plugin>
     </plugins>
   </build>
-
-  <scm>
-    <connection>scm:git:https://github.com/jetty/jetty-servlet-api.git</connection>
-    <developerConnection>scm:git:git@github.com:jetty/jetty-servlet-api.git</developerConnection>
-    <url>https://github.com/jetty/jetty-servlet-api</url>
-    <tag>HEAD</tag>
-  </scm>
 </project>
