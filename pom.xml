@@ -39,6 +39,12 @@
       <!-- Keep this version at 4.x, since 5.x is JakartaEE. -->
       <version>4.0.3</version>
     </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty.toolchain</groupId>
+      <artifactId>jetty-test-helper</artifactId>
+      <version>6.4</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -90,6 +96,9 @@
             <goals>
               <goal>manifest</goal>
             </goals>
+            <configuration>
+              <manifestLocation>${project.build.directory}/manifest/</manifestLocation>
+            </configuration>
           </execution>
         </executions>
       </plugin>
@@ -100,27 +109,27 @@
         <version>3.2.0</version>
         <executions>
           <execution>
-            <id>copy-servlet-jsp-resources</id>
+            <id>copy-servlet-resources</id>
             <goals>
               <goal>run</goal>
             </goals>
             <phase>process-resources</phase>
             <configuration>
               <target>
-                <!-- Move all resources into place first.
+                <!-- Move javax/servlet/jsp/resources/ into javax/servlet/resources/ to satisfy XML validation rules. -->
+                <move todir="${deps.sources.directory}/javax/servlet/resources/">
+                  <fileset dir="${deps.sources.directory}/javax/servlet/jsp/resources/" />
+                </move>
+                <!-- Copy all resources into place.
                      This will handle XSDs, DTDs, XMLs, LocalStrings_xx.properties, package.html, etc..
                   -->
-                <move todir="${project.build.outputDirectory}">
+                <copy todir="${project.build.outputDirectory}">
                   <fileset dir="${deps.sources.directory}">
                     <exclude name="javax/**/*.class" />
                     <exclude name="javax/**/*.java" />
                     <exclude name="META-INF/**" />
                   </fileset>
-                </move>
-                <!-- Move javax/servlet/jsp/resources/ into javax/servlet/resources/ to satisfy XML validation rules. -->
-                <move todir="${project.build.outputDirectory}/javax/servlet/resources/">
-                  <fileset dir="${project.build.outputDirectory}/javax/servlet/jsp/resources/" />
-                </move>
+                </copy>
               </target>
             </configuration>
           </execution>
@@ -137,15 +146,48 @@
             <goals>
               <goal>unpack-dependencies</goal>
             </goals>
-            <phase>generate-sources</phase>
+            <phase>generate-resources</phase>
             <configuration>
               <classifier>sources</classifier>
+              <includeScope>compile</includeScope>
               <failOnMissingClassifierArtifact>false</failOnMissingClassifierArtifact>
               <outputDirectory>${deps.sources.directory}</outputDirectory>
               <excludes>META-INF/**,
                 pom.xml,
                 about.html</excludes>
             </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Failsafe -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <version>3.5.4</version>
+        <configuration>
+          <includes>
+            <include>IT*.java</include>
+          </includes>
+          <systemPropertyVariables>
+            <projectVersion>${project.version}</projectVersion>
+            <projectJar>${project.build.directory}/${project.build.finalName}.jar</projectJar>
+            <projectJarSource>${project.build.directory}/${project.build.finalName}-sources.jar</projectJarSource>
+            <maven.it.name>${project.groupId}:${project.artifactId}</maven.it.name>
+          </systemPropertyVariables>
+        </configuration>
+        <executions>
+          <execution>
+            <id>integration-test</id>
+            <goals>
+              <goal>integration-test</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>verify</id>
+            <goals>
+              <goal>verify</goal>
+            </goals>
           </execution>
         </executions>
       </plugin>
@@ -179,7 +221,7 @@
             </goals>
             <phase>package</phase>
             <configuration>
-              <createSourcesJar>true</createSourcesJar>
+              <createSourcesJar>false</createSourcesJar>
               <shadeSourcesContent>true</shadeSourcesContent>
               <createDependencyReducedPom>true</createDependencyReducedPom>
               <dependencyReducedPomLocation>${project.build.directory}/dependency-reduced-pom.xml</dependencyReducedPomLocation>
@@ -209,9 +251,34 @@
               <transformers>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.IncludeResourceTransformer">
                   <resource>META-INF/MANIFEST.MF</resource>
-                  <file>${project.build.outputDirectory}/META-INF/MANIFEST.MF</file>
+                  <file>${project.build.directory}/manifest/MANIFEST.MF</file>
                 </transformer>
               </transformers>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Create the source jar -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>3.2.1</version>
+        <executions>
+          <execution>
+            <id>attach-sources</id>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+            <phase>package</phase>
+            <configuration>
+              <archive>
+                <manifestEntries>
+                  <Implementation-Version>${project.version}</Implementation-Version>
+                  <Implementation-Vendor>Eclipse.org - Jetty</Implementation-Vendor>
+                  <url>${jetty.url}</url>
+                </manifestEntries>
+              </archive>
             </configuration>
           </execution>
         </executions>
