@@ -11,14 +11,14 @@
   'jetty-javax-servlet-api' for backwards compatibility reasons. -->
   <groupId>org.eclipse.jetty.toolchain</groupId>
   <artifactId>jetty-servlet-api</artifactId>
-  <version>4.0.9-SNAPSHOT</version>
+  <version>4.0.9</version>
   <packaging>jar</packaging>
   <name>Jetty :: Servlet API and Schemas for JPMS and OSGi</name>
 
   <scm>
     <connection>scm:git:https://github.com/jetty/jetty-servlet-api.git</connection>
     <developerConnection>scm:git:git@github.com:jetty/jetty-servlet-api.git</developerConnection>
-    <tag>HEAD</tag>
+    <tag>jetty-servlet-api-4.0.9</tag>
     <url>https://github.com/jetty/jetty-servlet-api</url>
   </scm>
 
